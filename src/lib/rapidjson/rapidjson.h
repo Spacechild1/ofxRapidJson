@@ -15,6 +15,7 @@
 #ifndef RAPIDJSON_RAPIDJSON_H_
 #define RAPIDJSON_RAPIDJSON_H_
 
+
 /*!\file rapidjson.h
     \brief common definitions and configuration
     
@@ -68,8 +69,8 @@
     \brief Version of RapidJSON in "<major>.<minor>.<patch>" string format.
 */
 #define RAPIDJSON_MAJOR_VERSION 1
-#define RAPIDJSON_MINOR_VERSION 0
-#define RAPIDJSON_PATCH_VERSION 2
+#define RAPIDJSON_MINOR_VERSION 1
+#define RAPIDJSON_PATCH_VERSION 0
 #define RAPIDJSON_VERSION_STRING \
     RAPIDJSON_STRINGIFY(RAPIDJSON_MAJOR_VERSION.RAPIDJSON_MINOR_VERSION.RAPIDJSON_PATCH_VERSION)
 
@@ -157,6 +158,7 @@
     If users have their own definition, define RAPIDJSON_NO_INT64DEFINE to
     prevent RapidJSON from defining its own types.
 */
+
 #ifndef RAPIDJSON_NO_INT64DEFINE
 //!@cond RAPIDJSON_HIDDEN_FROM_DOXYGEN
 #if defined(_MSC_VER) && (_MSC_VER < 1800)	// Visual Studio 2013
