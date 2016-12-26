@@ -13,6 +13,18 @@
 
 #include "ofFileUtils.h"
 
+/*////////////////// ofxJsonWriter //////////////*/
+
+class ofxJsonWriter {
+public:
+    ofxJsonWriter();
+    ofxJsonWriter(const ofxJsonWriter&) = delete;
+    ~ofxJsonWriter();
+protected:
+
+};
+
+
 // namespace ofxRapidJson {
 
 class ofxJsonDocument;
@@ -72,7 +84,7 @@ public:
     int operator-(const ofxJsonIterator& that) const { return ptr_-that.ptr_; }
 private:
     IteratorType ptr_;
-    AllocatorType* allocator_;
+    AllocatorType* allocator_; // needs to be pointer to make assignment operator work correctly
 };
 
 using ofxJsonValueIterator = ofxJsonIterator<rapidjson::Value::ValueIterator, ofxJsonValueRef, rapidjson::Document::AllocatorType>;
@@ -93,13 +105,11 @@ public:
 
     /// load JSON data
     bool loadFromFile(const string& path);
-//    bool loadFromFile(ofFile& file);
     void loadFromBuffer(const string& buffer);
     void loadFromBuffer(const ofBuffer& buffer);
 
     /// save JSON data
     bool saveToFile(const string& path);
-//    void saveToFile(ofFile& file);
     void saveToBuffer(string& buffer);
     void saveToBuffer(ofBuffer& buffer);
 
@@ -110,17 +120,16 @@ public:
     /// keys are rapidjson "Pointers", such as "/foo/bar".
     /// note that you always need a leading '/'!
     ofxJsonValueIterator find(const string& key);
-    ofxJsonValueIterator end();
     /// get value reference by key.
     /// if the key doesn't exist, create it.
-//    ofxJsonValueRef get(const string& key);
     ofxJsonValueRef operator[](const string& key);
+
+    /// return Iterator past end
+    ofxJsonValueIterator end();
 
     /// get root value reference
     ofxJsonValueRef getRoot();
 
-    /// return Iterator past end
-//    ofxJsonIterator end();
     /// get the actual rapidjson::Document by reference
     /// to allow direct manipulation via the original rapidjson API
     rapidjson::Document& getDocument();
@@ -142,7 +151,6 @@ public:
     /// constructors:
     ofxJsonValueRef(rapidjson::Value& ref, rapidjson::Document::AllocatorType& allocator);
     ofxJsonValueRef(const ofxJsonValueRef& mom);
-//    ofxJsonValueRef(ofxJsonValueRef&& mom);
     ~ofxJsonValueRef();
 
     /// copy and move assignment
@@ -150,7 +158,6 @@ public:
     /// since this is a reference wrapper, assignment doesn't change the reference itself
     /// (this wouldn't be possible anyway) but the value it points to!
     ofxJsonValueRef& operator=(const ofxJsonValueRef& other);
-//    ofxJsonValueRef& operator=(ofxJsonValueRef&& other);
     /// the assignment operator lets us assign values to the Value reference:
     ///
     /// document["/key"] = 4.7
@@ -163,32 +170,42 @@ public:
     ofxJsonValueRef& operator=(const char(&s)[N]);
     /// catches std::string (makes a copy):
     ofxJsonValueRef& operator=(const string& s);
-    /// catches std::vector (makes an Array):
+
+    /// assign from std::vector (create Array):
     template<typename T>
     ofxJsonValueRef& operator=(const vector<T>& vec);
-    /*
-     * ofxJsonValueRef& operator=(const vector<bool>& vec);
-    ofxJsonValueRef& operator=(const vector<int>& vec);
-    ofxJsonValueRef& operator=(const vector<float>& vec);
-    ofxJsonValueRef& operator=(const vector<double>& vec);
-    */
+    /// catches std::string vectors
     ofxJsonValueRef& operator=(const vector<string>& vec);
+    /// assign from Array reference
     ofxJsonValueRef& operator=(const ofxJsonArrayRef& array);
+
+    /// assign from std::unordered_map (create Object)
+    template <typename T>
+    ofxJsonValueRef& operator=(const unordered_map<string, T>& map);
+    /// if value is string
+    ofxJsonValueRef& operator=(const unordered_map<string, string>& map);
+    /// assign from Object reference
     ofxJsonValueRef& operator=(const ofxJsonObjectRef& object);
+
     /// set Value (Number, String, Null)
     template<typename T>
     ofxJsonValueRef& setValue(T&& value);
-    /// set to null
+    /// set to Null
     ofxJsonValueRef& setNull();
-    /// set array
+    /// set to empty Array
     ofxJsonArrayRef setArray();
+    /// set from another Array
     ofxJsonArrayRef setArray(const ofxJsonArrayRef& array);
+    /// set to Array from std::vector
     template<typename T>
     ofxJsonArrayRef setArray(const vector<T>& vec);
-//    ofxJsonArrayRef setArray(const vector<string>& vec);
-    /// set Object
+    /// set to empty Object
     ofxJsonObjectRef setObject();
+    /// set from another Object
     ofxJsonObjectRef setObject(const ofxJsonObjectRef& object);
+    /// set to Object from a std::unordered_map
+    template <typename T>
+    ofxJsonObjectRef setObject(const unordered_map<string, T>& map);
 
     /// get type info
     ofxJsonValueType getType() const;
@@ -197,6 +214,7 @@ public:
     bool isString() const;
     bool isArray() const;
     bool isObject() const;
+    /// test if two ofxJsonValueRefs point to the same rapidjson::Value
     bool operator==(const ofxJsonValueRef& other);
     bool operator!=(const ofxJsonValueRef& other);
 
@@ -211,10 +229,14 @@ public:
     vector<float> getFloatVector() const;
     vector<double> getDoubleVector() const;
     vector<string> getStringVector() const;
+    unordered_map<string, bool> getBoolMap() const;
+    unordered_map<string, int> getIntMap() const;
+    unordered_map<string, float> getFloatMap() const;
+    unordered_map<string, double> getDoubleMap() const;
+    unordered_map<string, string> getStringMap() const;
+
     ofxJsonArrayRef getArray() const;
     ofxJsonObjectRef getObject() const;
-//    rapidjson::Value& getValue();
-//    const rapidjson::Value& getValue() const;
     /// type casts (implicit getters)
     operator bool() const;
     operator int() const;
@@ -226,13 +248,18 @@ public:
     operator vector<float>() const;
     operator vector<double>() const;
     operator vector<string>() const;
-//    operator rapidjson::Value&();
-//    operator const rapidjson::Value&() const;
+    operator unordered_map<string, bool>() const;
+    operator unordered_map<string, int>() const;
+    operator unordered_map<string, float>() const;
+    operator unordered_map<string, double>() const;
+    operator unordered_map<string, string>() const;
 
     ofxJsonValueRef* operator->(); // needed for ofxJsonValueIterator::operator->()
 protected:
     template<typename T>
     vector<T> getVector() const; // helper function
+    template<typename T>
+    unordered_map<string, T> getMap() const; // helper function
     rapidjson::Value& value_;
     rapidjson::Document::AllocatorType& allocator_;
 };
@@ -249,6 +276,10 @@ public:
     ofxJsonArrayRef& operator=(const ofxJsonArrayRef& other);
     template<typename T>
     ofxJsonArrayRef& operator=(const vector<T>& vec);
+
+    ofxJsonArrayRef& setArray(const ofxJsonArrayRef& other);
+    template<typename T>
+    ofxJsonArrayRef& setArray(const vector<T>& vec);
 
     ofxJsonValueRef operator[](size_t index) const;
 
@@ -290,48 +321,6 @@ protected:
     ofxJsonValueRef valueRef_;
 };
 
-
-/*////////////////// ofxJsonValueIterator /////////////*/
-/*
-class ofxJsonValueIterator {
-    friend class ofxJsonArrayRef; // needed because of ofxJsonArrayRef::erase()
-public:
-    ofxJsonValueIterator(rapidjson::Value* ptr, rapidjson::Value::AllocatorType& allocator)
-        : ptr_(ptr), allocator_(&allocator) {}
-    ofxJsonValueIterator(const ofxJsonValueIterator& mom)
-        : ptr_(mom.ptr_), allocator_(mom.allocator_) {}
-    ~ofxJsonValueIterator() {}
-
-    ofxJsonValueIterator& operator=(const ofxJsonValueIterator& other){ptr_ = other.ptr_; allocator_ = other.allocator_; return *this;}
-
-    ofxJsonValueIterator& operator++(){ ++ptr_; return *this; }
-    ofxJsonValueIterator& operator--(){ --ptr_; return *this; }
-    ofxJsonValueIterator  operator++(int){ ofxJsonValueIterator old(*this); ++ptr_; return old; }
-    ofxJsonValueIterator  operator--(int){ ofxJsonValueIterator old(*this); --ptr_; return old; }
-
-    ofxJsonValueIterator operator+(int n) const { return ofxJsonValueIterator(ptr_+n, *allocator_); }
-    ofxJsonValueIterator operator-(int n) const { return ofxJsonValueIterator(ptr_-n, *allocator_); }
-
-    ofxJsonValueIterator& operator+=(int n) { ptr_+=n; return *this; }
-    ofxJsonValueIterator& operator-=(int n) { ptr_-=n; return *this; }
-
-    bool operator==(const ofxJsonValueIterator& that) const { return ptr_ == that.ptr_; }
-    bool operator!=(const ofxJsonValueIterator& that) const { return ptr_ != that.ptr_; }
-    bool operator<=(const ofxJsonValueIterator& that) const { return ptr_ <= that.ptr_; }
-    bool operator>=(const ofxJsonValueIterator& that) const { return ptr_ >= that.ptr_; }
-    bool operator< (const ofxJsonValueIterator& that) const { return ptr_ < that.ptr_; }
-    bool operator> (const ofxJsonValueIterator& that) const { return ptr_ > that.ptr_; }
-
-    ofxJsonValueRef operator*() const { return ofxJsonValueRef(*ptr_, *allocator_); }
-    ofxJsonValueRef operator->() const { return ofxJsonValueRef(*ptr_, *allocator_); } // forwards to ofxJsonValueRef::operator->()
-    ofxJsonValueRef operator[](size_t n) const { return ofxJsonValueRef(ptr_[n], *allocator_); }
-
-    int operator-(const ofxJsonValueIterator& that) const { return ptr_-that.ptr_; }
-private:
-    rapidjson::Value* ptr_;
-    rapidjson::Value::AllocatorType* allocator_;
-};
-*/
 /*///////////// ofxJsonObjectRef ////////////////////////////*/
 
 class ofxJsonObjectRef {
@@ -342,9 +331,21 @@ public:
     ~ofxJsonObjectRef();
 
     ofxJsonObjectRef& operator=(const ofxJsonObjectRef& other);
+    template<typename T>
+    ofxJsonObjectRef& operator=(const unordered_map<string, T>& map);
 
+    ofxJsonObjectRef& setObject(const ofxJsonObjectRef& other);
+    template<typename T>
+    ofxJsonObjectRef& setObject(const unordered_map<string, T>& map);
+
+    /// return a reference to a member value.
+    /// if the name doesn't exist yet, a new member (with value = Null) is inserted.
     ofxJsonValueRef operator[](const string& name) const;
+    /// search for a member by name. return an iterator to the found member
+    /// or to ofxJsonObjectRef::end() if it doesn't exist.
     ofxJsonMemberIterator find(const string& name) const;
+    /// ask if a member exists
+    int count(const string& name) const;
 
     size_t size() const;
     bool empty() const;
@@ -360,8 +361,22 @@ public:
     ofxJsonMemberIterator erase(const ofxJsonMemberIterator& pos);
     ofxJsonMemberIterator erase(const ofxJsonMemberIterator& first, const ofxJsonMemberIterator& last);
 
+    unordered_map<string, bool> getBoolMap() const;
+    unordered_map<string, int> getIntMap() const;
+    unordered_map<string, float> getFloatMap() const;
+    unordered_map<string, double> getDoubleMap() const;
+    unordered_map<string, string> getStringMap() const;
+
     ofxJsonValueRef getValue() const;
+
+    operator unordered_map<string, bool>() const;
+    operator unordered_map<string, int>() const;
+    operator unordered_map<string, float>() const;
+    operator unordered_map<string, double>() const;
+    operator unordered_map<string, string>() const;
 protected:
+    template<typename T>
+    unordered_map<string, T> getMap() const; // helper function
     ofxJsonValueRef valueRef_;
 };
 
@@ -484,13 +499,6 @@ inline ofxJsonValueIterator ofxJsonDocument::end(){
     return ofxJsonValueIterator(nullptr, document_.GetAllocator());
 }
 
-/*
-/// get value reference by key
-inline ofxJsonValueRef ofxJsonDocument::get(const string& key){
-    return operator[](key);
-}
-*/
-
 inline ofxJsonValueRef ofxJsonDocument::operator[](const string& key){
     rapidjson::Pointer ptr(key.data(), key.size());
     rapidjson::Value* value = ptr.Get(document_);
@@ -511,11 +519,6 @@ inline rapidjson::Document& ofxJsonDocument::getDocument(){
     return document_;
 }
 
-/*
-inline const rapidjson::Document& ofxJsonDocument::getDocument() const {
-    return document_;
-}
-*/
 
 /*///////////////////// ofxJsonValueRef /////////////////*/
 
@@ -525,10 +528,7 @@ inline ofxJsonValueRef::ofxJsonValueRef(rapidjson::Value& ref, rapidjson::Docume
 
 inline ofxJsonValueRef::ofxJsonValueRef(const ofxJsonValueRef& mom)
     : value_(mom.value_), allocator_(mom.allocator_) {}
-/*
-inline ofxJsonValueRef::ofxJsonValueRef(ofxJsonValueRef&& mom)
-    : value_(mom.value_), allocator_(mom.allocator_) {}
-*/
+
 inline ofxJsonValueRef::~ofxJsonValueRef() {}
 
 /// copy assignment
@@ -538,14 +538,7 @@ inline ofxJsonValueRef& ofxJsonValueRef::operator=(const ofxJsonValueRef& other)
     }
     return *this;
 }
-/*
-inline ofxJsonValueRef& ofxJsonValueRef::operator=(ofxJsonValueRef&& other){
-    if (this != &other){
-        value_.CopyFrom(other.value_, allocator_); // also copy! 'other' doesn't own data, it just holds a reference
-    }
-    return *this;
-}
-*/
+
 /// implicit setters
 ///
 /// for plain types
@@ -584,39 +577,35 @@ inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<string>& vec){
     }
     return *this;
 }
-
-/*
-inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<bool>& vec){
-    setVector(vec); return *this;
-}
-
-inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<int>& vec){
-    setVector(vec); return *this;
-}
-
-inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<float>& vec){
-    setVector(vec); return *this;
-}
-
-inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<double>& vec){
-    setVector(vec); return *this;
-}
-
-inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<string>& vec){
-    value_.SetArray();
-    value_.Clear();
-
-    for (auto& s : vec){
-        value_.PushBack(rapidjson::Value().SetString(s.data(), s.length(), allocator_).Move(), allocator_);
-    }
-    return *this;
-}
-*/
-
+/// from Array reference
 inline ofxJsonValueRef& ofxJsonValueRef::operator=(const ofxJsonArrayRef& array) {
     return operator=(array.valueRef_);
 }
 
+/// for maps (set to Object)
+template<typename T>
+inline ofxJsonValueRef& ofxJsonValueRef::operator=(const unordered_map<string, T>& map){
+    value_.SetObject();
+
+    for (auto& k : map){
+        rapidjson::Value name(k.first.data(), k.first.size(), allocator_);
+        rapidjson::Value value(k.second);
+        value_.AddMember(name.Move(), value.Move(), allocator_);
+    }
+    return *this;
+}
+/// for string maps
+inline ofxJsonValueRef& ofxJsonValueRef::operator=(const unordered_map<string, string>& map){
+    value_.SetObject();
+
+    for (auto& k : map){
+        rapidjson::Value name(k.first.data(), k.first.size(), allocator_);
+        rapidjson::Value value(k.second.data(), k.second.size(), allocator_);
+        value_.AddMember(name.Move(), value.Move(), allocator_);
+    }
+    return *this;
+}
+/// from Object reference
 inline ofxJsonValueRef& ofxJsonValueRef::operator=(const ofxJsonObjectRef& object) {
     return operator=(object.valueRef_);
 }
@@ -644,12 +633,8 @@ inline ofxJsonArrayRef ofxJsonValueRef::setArray(const ofxJsonArrayRef& array) {
 
 template<typename T>
 inline ofxJsonArrayRef ofxJsonValueRef::setArray(const vector<T>& vec){
-    return ofxJsonArrayRef(operator=(vec));
+    return ofxJsonArrayRef(operator=(vec)); // forward vector reference to assignment operator
 }
-
-//inline ofxJsonArrayRef ofxJsonValueRef::setArray(const vector<string>& vec){
-//    return ofxJsonArrayRef(operator=(vec));
-//}
 
 inline ofxJsonObjectRef ofxJsonValueRef::setObject() {
     value_.SetObject();
@@ -658,6 +643,11 @@ inline ofxJsonObjectRef ofxJsonValueRef::setObject() {
 
 inline ofxJsonObjectRef ofxJsonValueRef::setObject(const ofxJsonObjectRef& object) {
     return ofxJsonObjectRef(operator=(object));
+}
+
+template<typename T>
+inline ofxJsonObjectRef ofxJsonValueRef::setObject(const unordered_map<string, T>& map){
+    return ofxJsonObjectRef(operator=(map)); // forward vector reference to assignment operator
 }
 
 /// get type info
@@ -695,7 +685,7 @@ inline bool ofxJsonValueRef::isObject() const{
 }
 
 inline bool ofxJsonValueRef::operator==(const ofxJsonValueRef& other){
-    return (value_ == other.value_);
+    return (&value_ == &other.value_); // compare addresses!
 }
 
 inline bool ofxJsonValueRef::operator!=(const ofxJsonValueRef& other){
@@ -734,6 +724,21 @@ inline vector<double> ofxJsonValueRef::getDoubleVector() const {
 inline vector<string> ofxJsonValueRef::getStringVector() const {
     return operator vector<string>();
 }
+inline unordered_map<string, bool> ofxJsonValueRef::getBoolMap() const {
+    return operator unordered_map<string, bool>();
+}
+inline unordered_map<string, int> ofxJsonValueRef::getIntMap() const {
+    return operator unordered_map<string, int>();
+}
+inline unordered_map<string, float> ofxJsonValueRef::getFloatMap() const {
+    return operator unordered_map<string, float>();
+}
+inline unordered_map<string, double> ofxJsonValueRef::getDoubleMap() const {
+    return operator unordered_map<string, double>();
+}
+inline unordered_map<string, string> ofxJsonValueRef::getStringMap() const {
+    return operator unordered_map<string, string>();
+}
 
 inline ofxJsonArrayRef ofxJsonValueRef::getArray() const {
     return ofxJsonArrayRef(*this);
@@ -743,14 +748,6 @@ inline ofxJsonObjectRef ofxJsonValueRef::getObject() const {
     return ofxJsonObjectRef(*this);
 }
 
-/*
-inline rapidjson::Value& ofxJsonValueRef::getValue(){
-    return value_;
-}
-inline const rapidjson::Value& ofxJsonValueRef::getValue() const{
-    return value_;
-}
-*/
 /// type casting (implicit getters)
 inline ofxJsonValueRef::operator bool() const{
     if (value_.IsBool()){
@@ -813,29 +810,50 @@ inline ofxJsonValueRef::operator vector<double>() const {
 inline ofxJsonValueRef::operator vector<string>() const {
     return getVector<string>();
 }
-/*
-inline ofxJsonValueRef::operator rapidjson::Value&(){
-    return value_;
+
+inline ofxJsonValueRef::operator unordered_map<string, bool>() const {
+    return getMap<bool>();
 }
-inline ofxJsonValueRef::operator const rapidjson::Value&() const{
-    return value_;
+inline ofxJsonValueRef::operator unordered_map<string, int>() const {
+    return getMap<int>();
 }
-*/
+inline ofxJsonValueRef::operator unordered_map<string, float>() const {
+    return getMap<float>();
+}
+inline ofxJsonValueRef::operator unordered_map<string, double>() const {
+    return getMap<double>();
+}
+inline ofxJsonValueRef::operator unordered_map<string, string>() const {
+    return getMap<string>();
+}
+
 
 // needed for ofxJsonValueIterator::operator->()
 inline ofxJsonValueRef* ofxJsonValueRef::operator->() {
     return this;
 }
 
- // helper function
+// helper function
 template<typename T>
 vector<T> ofxJsonValueRef::getVector() const {
     if (value_.IsArray()){
         return getArray().getVector<T>();
+    } else if (value_.IsNumber() || value_.IsString()) {
+        vector<T> vec;
+        vec.push_back(static_cast<T>(*this));
+        return vec; // vector with single element
     } else {
-        vector<T> vec(1); // vector with single element
-        vec[0] = static_cast<T>(*this);
-        return vec;
+        return vector<T>{}; // empty vector
+    }
+}
+
+// helper function
+template<typename T>
+unordered_map<string, T> ofxJsonValueRef::getMap() const {
+    if (value_.IsObject()){
+        return getObject().getMap<T>();
+    } else {
+        return unordered_map<string, T>{}; // empty map
     }
 }
 
@@ -856,9 +874,18 @@ inline ofxJsonArrayRef& ofxJsonArrayRef::operator=(const ofxJsonArrayRef& other)
 
 template<typename T>
 inline ofxJsonArrayRef& ofxJsonArrayRef::operator=(const vector<T>& vec){
-    // just forward to ofxJsonValueRef::setArray which will handle the different types correctly
-    valueRef_.setArray(vec);
+    // just forward to ofxJsonValueRef assignment operator which will handle the different types correctly
+    valueRef_ = vec;
     return *this;
+}
+
+inline ofxJsonArrayRef& ofxJsonArrayRef::setArray(const ofxJsonArrayRef& other){
+    return operator=(other);
+}
+
+template<typename T>
+inline ofxJsonArrayRef& ofxJsonArrayRef::setArray(const vector<T>& vec){
+    return operator=(vec);
 }
 
 inline ofxJsonValueRef ofxJsonArrayRef::operator[](size_t index) const {
@@ -966,7 +993,6 @@ inline ofxJsonValueRef ofxJsonArrayRef::getValue() const {
     return valueRef_;
 }
 
-
 inline ofxJsonArrayRef::operator vector<bool>() const {
     return getVector<bool>();
 }
@@ -986,7 +1012,7 @@ inline ofxJsonArrayRef::operator vector<string>() const {
 /// helper function
 template<typename T>
 inline vector<T> ofxJsonArrayRef::getVector() const{
-    vector<T> vec{};
+    vector<T> vec;
     for (auto it = valueRef_.value_.Begin(), end = valueRef_.value_.End(); it != end; ++it){
         ofxJsonValueRef val(*it, valueRef_.allocator_); // not very efficient but convenient
         vec.push_back(static_cast<T>(val)); // since we can utilize ofxJasonValueRef's overloaded typecast operator
@@ -1009,14 +1035,42 @@ inline ofxJsonObjectRef& ofxJsonObjectRef::operator=(const ofxJsonObjectRef& oth
     valueRef_ = other.valueRef_; // simply copy assign
 }
 
+template<typename T>
+inline ofxJsonObjectRef& ofxJsonObjectRef::operator=(const unordered_map<string, T>& map){
+    // just forward to ofxJsonValueRef assignment operator which will handle the different types correctly
+    valueRef_ = map;
+    return *this;
+}
+
+inline ofxJsonObjectRef& ofxJsonObjectRef::setObject(const ofxJsonObjectRef& other){
+    return operator=(other);
+}
+
+template<typename T>
+inline ofxJsonObjectRef& ofxJsonObjectRef::setObject(const unordered_map<string, T>& map){
+    return operator=(map);
+}
+/// get reference to value or insert new member if the name doesn't exist yet.
 inline ofxJsonValueRef ofxJsonObjectRef::operator[](const string& name) const {
-    rapidjson::Value temp(name.data(), name.size());
-    return ofxJsonValueRef(valueRef_.value_[temp], valueRef_.allocator_);
+    rapidjson::Value key(name.data(), name.size()); // treat it as a constant string
+    auto it = valueRef_.value_.FindMember(key);
+    if (it == valueRef_.value_.MemberEnd()){
+        // doesn't exist -> insert name (with value = Null)
+        valueRef_.value_.AddMember(rapidjson::Value(key, valueRef_.allocator_), rapidjson::Value(), valueRef_.allocator_); // copy the string!
+        it = valueRef_.value_.FindMember(key); // find the new value. not sure it's necessarily the one before end()... so better check again.
+    }
+    return ofxJsonValueRef(it->value, valueRef_.allocator_);
 }
 
 inline ofxJsonMemberIterator ofxJsonObjectRef::find(const string& name) const {
-    rapidjson::Value temp(name.data(), name.size());
-    return ofxJsonMemberIterator(valueRef_.value_.FindMember(temp), valueRef_.allocator_);
+    rapidjson::Value key(name.data(), name.size()); // treat it as a constant string
+    return ofxJsonMemberIterator(valueRef_.value_.FindMember(key), valueRef_.allocator_);
+}
+
+inline int ofxJsonObjectRef::count(const string& name) const {
+    rapidjson::Value key(name.data(), name.size());
+    auto it = valueRef_.value_.FindMember(key);
+    return (it != valueRef_.value_.MemberEnd());
 }
 
 inline size_t ofxJsonObjectRef::size() const {
@@ -1068,9 +1122,52 @@ inline ofxJsonMemberIterator ofxJsonObjectRef::erase(const ofxJsonMemberIterator
     return ofxJsonMemberIterator(valueRef_.value_.EraseMember(first.ptr_, last.ptr_), valueRef_.allocator_);
 }
 
+
+inline unordered_map<string, bool> ofxJsonObjectRef::getBoolMap() const {
+    return operator unordered_map<string, bool>();
+}
+inline unordered_map<string, int> ofxJsonObjectRef::getIntMap() const {
+    return operator unordered_map<string, int>();
+}
+inline unordered_map<string, float> ofxJsonObjectRef::getFloatMap() const {
+    return operator unordered_map<string, float>();
+}
+inline unordered_map<string, double> ofxJsonObjectRef::getDoubleMap() const {
+    return operator unordered_map<string, double>();
+}
+inline unordered_map<string, string> ofxJsonObjectRef::getStringMap() const {
+    return operator unordered_map<string, string>();
+}
+
 inline ofxJsonValueRef ofxJsonObjectRef::getValue() const {
     return valueRef_;
 }
 
+inline ofxJsonObjectRef::operator unordered_map<string, bool>() const {
+    return getMap<bool>();
+}
+inline ofxJsonObjectRef::operator unordered_map<string, int>() const {
+    return getMap<int>();
+}
+inline ofxJsonObjectRef::operator unordered_map<string, float>() const {
+    return getMap<float>();
+}
+inline ofxJsonObjectRef::operator unordered_map<string, double>() const {
+    return getMap<double>();
+}
+inline ofxJsonObjectRef::operator unordered_map<string, string>() const {
+    return getMap<string>();
+}
+
+/// helper function
+template<typename T>
+inline unordered_map<string, T> ofxJsonObjectRef::getMap() const{
+    unordered_map<string, T> map;
+    for (auto it = valueRef_.value_.MemberBegin(), end = valueRef_.value_.MemberEnd(); it != end; ++it){
+        ofxJsonMemberRef member(*it, valueRef_.allocator_); // not very efficient but convenient
+        map.emplace(static_cast<string>(member.name), static_cast<T>(member.value)); // since we can utilize ofxJasonValueRef's overloaded typecast operator
+    }
+    return map;
+}
 
 // } // end of namespace
