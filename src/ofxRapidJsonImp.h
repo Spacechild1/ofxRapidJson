@@ -20,9 +20,9 @@ inline void ofxPrettyJsonWriter::reset(){
     writer_.Reset(buffer_);
 }
 
-inline bool ofxPrettyJsonWriter::saveToBuffer(char* data, size_t size){
+inline bool ofxPrettyJsonWriter::saveToBuffer(string& buffer){
     if (writer_.IsComplete()){
-        memcpy(data, buffer_.GetString(), buffer_.GetSize());
+        buffer.assign(buffer_.GetString(), buffer_.GetSize());
         return true;
     } else {
         ofLogWarning("ofxPrettyJsonWriter") << "JSON is not complete!\n";
@@ -30,12 +30,14 @@ inline bool ofxPrettyJsonWriter::saveToBuffer(char* data, size_t size){
     }
 }
 
-inline bool ofxPrettyJsonWriter::saveToBuffer(string& buffer){
-    return saveToBuffer(&buffer[0], buffer.size());
-}
-
 inline bool ofxPrettyJsonWriter::saveToBuffer(ofBuffer& buffer){
-    return saveToBuffer(buffer.getData(), buffer.size());
+    if (writer_.IsComplete()){
+        buffer.set(buffer_.GetString(), buffer_.GetSize());
+        return true;
+    } else {
+        ofLogWarning("ofxPrettyJsonWriter") << "JSON is not complete!\n";
+        return false;
+    }
 }
 
 inline bool ofxPrettyJsonWriter::saveToFile(const string& path){
@@ -223,31 +225,39 @@ inline bool ofxJsonDocument::saveToFile(const string& path, bool pretty){
 }
 
 /// save to binary buffer
-inline bool ofxJsonDocument::saveToBuffer(char *data, size_t size, bool pretty){
-    rapidjson::StringBuffer stringBuf;
 
+inline bool ofxJsonDocument::saveToBuffer(rapidjson::StringBuffer& buf, bool pretty){
     if (pretty){
-        rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(stringBuf);
-        if (document_.Accept(writer)){
-            memcpy(data, stringBuf.GetString(), size);
-            return true;
-        }
+        rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buf);
+        return document_.Accept(writer);
     } else {
-        rapidjson::Writer<rapidjson::StringBuffer> writer(stringBuf);
-        if (document_.Accept(writer)){
-            memcpy(data, stringBuf.GetString(), size);
-            return true;
-        }
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        return document_.Accept(writer);
     }
-    return false;
 }
 
 inline bool ofxJsonDocument::saveToBuffer(string& buffer, bool pretty){
-    return saveToBuffer(&buffer[0], buffer.size(), pretty);
+    rapidjson::StringBuffer stringBuf;
+    if (saveToBuffer(stringBuf, pretty)){
+        buffer.assign(stringBuf.GetString(), stringBuf.GetSize());
+        return true;
+    } else {
+        return false;
+    }
 }
 
 inline bool ofxJsonDocument::saveToBuffer(ofBuffer& buffer, bool pretty){
-    return saveToBuffer(buffer.getData(), buffer.size(), pretty);
+    rapidjson::StringBuffer stringBuf;
+    if (saveToBuffer(stringBuf, pretty)){
+        buffer.set(stringBuf.GetString(), stringBuf.GetSize());
+        return true;
+    } else {
+        return false;
+    }
+}
+
+inline void ofxJsonDocument::clear(){
+    document_.Clear();
 }
 
 /// find value by key

@@ -29,7 +29,6 @@ public:
     ofxPrettyJsonWriter& operator<<(T&& val);
 
     void reset();
-    bool saveToBuffer(char* data, size_t size);
     bool saveToBuffer(string& buffer);
     bool saveToBuffer(ofBuffer& buffer);
     bool saveToFile(const string& path);
@@ -145,16 +144,15 @@ public:
 
     /// load JSON data
     bool loadFromFile(const string& path);
-    bool loadFromBuffer(const char *data, size_t size);
     bool loadFromBuffer(const string& buffer);
     bool loadFromBuffer(const ofBuffer& buffer);
 
     /// save JSON data
     bool saveToFile(const string& path, bool pretty = true);
-    bool saveToBuffer(char *data, size_t size, bool pretty = true);
     bool saveToBuffer(string& buffer, bool pretty = true);
     bool saveToBuffer(ofBuffer& buffer, bool pretty = true);
-
+    /// clear document
+    void clear();
     /// does a key exist?
     /// return an ofxJsonValueIterator to the found Value
     /// or to document.end() if it doesn't exist.
@@ -179,6 +177,8 @@ public:
 protected:
     rapidjson::Document document_;
     void printError(rapidjson::ParseErrorCode error, size_t offset);  
+    bool loadFromBuffer(const char* data, size_t size);
+    bool saveToBuffer(rapidjson::StringBuffer&, bool pretty);
 };
 
 /*///////////// ofxJsonValueRef ////////////////////////////*/
