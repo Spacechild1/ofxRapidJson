@@ -221,6 +221,8 @@ public:
     ofxJsonValueRef& operator=(const vector<string>& vec);
     /// assign from Array reference
     ofxJsonValueRef& operator=(const ofxJsonArrayRef& array);
+    /// assign from ofPoint()
+    ofxJsonValueRef& operator=(const ofPoint& point);
 
     /// assign from std::unordered_map (create Object)
     template <typename T>
@@ -242,6 +244,8 @@ public:
     /// set to Array from std::vector
     template<typename T>
     ofxJsonArrayRef setArray(const vector<T>& vec);
+    /// set to Array from ofPoint
+    ofxJsonArrayRef setArray(const ofPoint& point);
     /// set to empty Object
     ofxJsonObjectRef setObject();
     /// set from another Object
@@ -277,6 +281,7 @@ public:
     unordered_map<string, float> getFloatMap() const;
     unordered_map<string, double> getDoubleMap() const;
     unordered_map<string, string> getStringMap() const;
+    ofPoint getPoint() const;
 
     ofxJsonArrayRef getArray() const;
     ofxJsonObjectRef getObject() const;
@@ -286,16 +291,11 @@ public:
     operator float() const;
     operator double() const;
     operator string() const;
-    operator vector<bool>() const;
-    operator vector<int>() const;
-    operator vector<float>() const;
-    operator vector<double>() const;
-    operator vector<string>() const;
-    operator unordered_map<string, bool>() const;
-    operator unordered_map<string, int>() const;
-    operator unordered_map<string, float>() const;
-    operator unordered_map<string, double>() const;
-    operator unordered_map<string, string>() const;
+    template <typename T>
+    operator vector<T>() const;
+    template <typename T>
+    operator unordered_map<string, T>() const;
+    operator ofPoint() const;
 
     ofxJsonValueRef* operator->(); // needed for ofxJsonValueIterator::operator->()
 protected:
@@ -319,10 +319,12 @@ public:
     ofxJsonArrayRef& operator=(const ofxJsonArrayRef& other);
     template<typename T>
     ofxJsonArrayRef& operator=(const vector<T>& vec);
+    ofxJsonArrayRef& operator=(const ofPoint& point);
 
     ofxJsonArrayRef& setArray(const ofxJsonArrayRef& other);
     template<typename T>
     ofxJsonArrayRef& setArray(const vector<T>& vec);
+    ofxJsonArrayRef& setArray(const ofPoint& point);
 
     ofxJsonValueRef operator[](size_t index) const;
 
@@ -350,14 +352,13 @@ public:
     vector<float> getFloatVector() const;
     vector<double> getDoubleVector() const;
     vector<string> getStringVector() const;
+    ofPoint getPoint() const;
 
     ofxJsonValueRef getValue() const;
 
-    operator vector<bool>() const;
-    operator vector<int>() const;
-    operator vector<float>() const;
-    operator vector<double>() const;
-    operator vector<string>() const;
+    template<typename T>
+    operator vector<T>() const;
+    operator ofPoint() const;
 protected:
     template<typename T>
     vector<T> getVector() const; // helper function
@@ -412,11 +413,8 @@ public:
 
     ofxJsonValueRef getValue() const;
 
-    operator unordered_map<string, bool>() const;
-    operator unordered_map<string, int>() const;
-    operator unordered_map<string, float>() const;
-    operator unordered_map<string, double>() const;
-    operator unordered_map<string, string>() const;
+    template<typename T>
+    operator unordered_map<string, T>() const;
 protected:
     template<typename T>
     unordered_map<string, T> getMap() const; // helper function
@@ -434,6 +432,7 @@ struct ofxJsonMemberRef {
 
     ofxJsonMemberRef& operator=(const ofxJsonMemberRef& other){
         name = other.name; value = other.value; // copy name and value from other to this
+		return *this;
     }
 
     ofxJsonMemberRef* operator->() {return this;} // needed by ofxJsonMemberIterator

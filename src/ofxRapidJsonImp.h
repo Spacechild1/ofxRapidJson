@@ -271,7 +271,7 @@ inline ofxJsonValueIterator ofxJsonDocument::end(){
     return ofxJsonValueIterator(nullptr, document_.GetAllocator());
 }
 
-inline ofxJsonValueRef ofxJsonDocument::operator[](const string& key){
+inline ofxJsonValueRef ofxJsonDocument::operator[](const string& key) {
     rapidjson::Pointer ptr(key.data(), key.size());
     rapidjson::Value* value = ptr.Get(document_);
     if (value){
@@ -339,6 +339,7 @@ inline ofxJsonValueRef& ofxJsonValueRef::operator=(const string& s){
 template<typename T>
 inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<T>& vec){
     value_.SetArray();
+    value_.Reserve(vec.size(), allocator_);
 
     for (auto& k : vec){
         value_.PushBack(rapidjson::Value(k), allocator_);
@@ -348,15 +349,28 @@ inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<T>& vec){
 /// for string vectors
 inline ofxJsonValueRef& ofxJsonValueRef::operator=(const vector<string>& vec){
     value_.SetArray();
+    value_.Reserve(vec.size(), allocator_);
 
     for (auto& s : vec){
         value_.PushBack(rapidjson::Value(s.data(), s.length(), allocator_), allocator_);
     }
     return *this;
 }
+
+
 /// from Array reference
 inline ofxJsonValueRef& ofxJsonValueRef::operator=(const ofxJsonArrayRef& array) {
     return operator=(array.valueRef_);
+}
+
+inline ofxJsonValueRef& ofxJsonValueRef::operator=(const ofPoint& point){
+    value_.SetArray();
+    value_.Reserve(3, allocator_);
+
+    for (int i = 0; i < 3; ++i){
+        value_.PushBack(rapidjson::Value(point[i]), allocator_);
+    }
+    return *this;
 }
 
 /// for maps (set to Object)
@@ -413,6 +427,10 @@ inline ofxJsonArrayRef ofxJsonValueRef::setArray(const vector<T>& vec){
     return ofxJsonArrayRef(operator=(vec)); // forward vector reference to assignment operator
 }
 
+inline ofxJsonArrayRef ofxJsonValueRef::setArray(const ofPoint& point){
+    return ofxJsonArrayRef(operator=(point)); // forward vector reference to assignment operator
+}
+
 inline ofxJsonObjectRef ofxJsonValueRef::setObject() {
     value_.SetObject();
     return ofxJsonObjectRef(*this);
@@ -443,6 +461,7 @@ inline ofxJsonValueType ofxJsonValueRef::getType() const {
         return OFX_JSON_NULL;
     } else {
         cout << "Unknown JSON type!\n";
+		return OFX_JSON_NULL;
     }
 }
 inline bool ofxJsonValueRef::isBool() const{
@@ -516,6 +535,10 @@ inline unordered_map<string, double> ofxJsonValueRef::getDoubleMap() const {
 inline unordered_map<string, string> ofxJsonValueRef::getStringMap() const {
     return operator unordered_map<string, string>();
 }
+inline ofPoint ofxJsonValueRef::getPoint() const {
+    return operator ofPoint();
+}
+
 
 inline ofxJsonArrayRef ofxJsonValueRef::getArray() const {
     return ofxJsonArrayRef(*this);
@@ -572,38 +595,23 @@ inline ofxJsonValueRef::operator string() const {
         return string();
     }
 }
-inline ofxJsonValueRef::operator vector<bool>() const {
-    return getVector<bool>();
+
+template <typename T>
+inline ofxJsonValueRef::operator vector<T>() const {
+    return getVector<T>();
 }
-inline ofxJsonValueRef::operator vector<int>() const {
-    return getVector<int>();
-}
-inline ofxJsonValueRef::operator vector<float>() const {
-    return getVector<float>();
-}
-inline ofxJsonValueRef::operator vector<double>() const {
-    return getVector<double>();
-}
-inline ofxJsonValueRef::operator vector<string>() const {
-    return getVector<string>();
+template <typename T>
+inline ofxJsonValueRef::operator unordered_map<string, T>() const {
+    return getMap<T>();
 }
 
-inline ofxJsonValueRef::operator unordered_map<string, bool>() const {
-    return getMap<bool>();
+inline ofxJsonValueRef::operator ofPoint() const {
+    if (value_.IsArray()){
+        return getArray().getPoint();
+    } else {
+        return ofPoint();
+    }
 }
-inline ofxJsonValueRef::operator unordered_map<string, int>() const {
-    return getMap<int>();
-}
-inline ofxJsonValueRef::operator unordered_map<string, float>() const {
-    return getMap<float>();
-}
-inline ofxJsonValueRef::operator unordered_map<string, double>() const {
-    return getMap<double>();
-}
-inline ofxJsonValueRef::operator unordered_map<string, string>() const {
-    return getMap<string>();
-}
-
 
 // needed for ofxJsonValueIterator::operator->()
 inline ofxJsonValueRef* ofxJsonValueRef::operator->() {
@@ -656,6 +664,12 @@ inline ofxJsonArrayRef& ofxJsonArrayRef::operator=(const vector<T>& vec){
     return *this;
 }
 
+inline ofxJsonArrayRef& ofxJsonArrayRef::operator=(const ofPoint& point){
+    // just forward to ofxJsonValueRef assignment operator which will handle the different types correctly
+    valueRef_ = point;
+    return *this;
+}
+
 inline ofxJsonArrayRef& ofxJsonArrayRef::setArray(const ofxJsonArrayRef& other){
     return operator=(other);
 }
@@ -663,6 +677,10 @@ inline ofxJsonArrayRef& ofxJsonArrayRef::setArray(const ofxJsonArrayRef& other){
 template<typename T>
 inline ofxJsonArrayRef& ofxJsonArrayRef::setArray(const vector<T>& vec){
     return operator=(vec);
+}
+
+inline ofxJsonArrayRef& ofxJsonArrayRef::setArray(const ofPoint& point){
+    return operator=(point);
 }
 
 inline ofxJsonValueRef ofxJsonArrayRef::operator[](size_t index) const {
@@ -751,39 +769,41 @@ inline ofxJsonValueIterator ofxJsonArrayRef::erase(const ofxJsonValueIterator& f
 }
 
 inline vector<bool> ofxJsonArrayRef::getBoolVector() const {
-    return operator vector<bool>();
+    return getVector<bool>();
 }
 inline vector<int> ofxJsonArrayRef::getIntVector() const {
-    return operator vector<int>();
+    return getVector<int>();
 }
 inline vector<float> ofxJsonArrayRef::getFloatVector() const {
-    return operator vector<float>();
+    return getVector<float>();
 }
 inline vector<double> ofxJsonArrayRef::getDoubleVector() const {
-    return operator vector<double>();
+    return getVector<double>();
 }
 inline vector<string> ofxJsonArrayRef::getStringVector() const {
-    return operator vector<string>();
+    return getVector<string>();
 }
+inline ofPoint ofxJsonArrayRef::getPoint() const {
+    return operator ofPoint();
+}
+
 
 inline ofxJsonValueRef ofxJsonArrayRef::getValue() const {
     return valueRef_;
 }
 
-inline ofxJsonArrayRef::operator vector<bool>() const {
-    return getVector<bool>();
+template<typename T>
+inline ofxJsonArrayRef::operator vector<T>() const {
+    return getVector<T>();
 }
-inline ofxJsonArrayRef::operator vector<int>() const {
-    return getVector<int>();
-}
-inline ofxJsonArrayRef::operator vector<float>() const {
-    return getVector<float>();
-}
-inline ofxJsonArrayRef::operator vector<double>() const {
-    return getVector<double>();
-}
-inline ofxJsonArrayRef::operator vector<string>() const {
-    return getVector<string>();
+
+inline ofxJsonArrayRef::operator ofPoint() const {
+    ofPoint point;
+    int dim = std::min<int>(size(), 3);
+    for (int i = 0; i < dim; ++i){
+        point[i] = (float)operator[](i);
+    }
+    return point;
 }
 
 /// helper function
@@ -810,6 +830,7 @@ inline ofxJsonObjectRef::~ofxJsonObjectRef() {}
 
 inline ofxJsonObjectRef& ofxJsonObjectRef::operator=(const ofxJsonObjectRef& other){
     valueRef_ = other.valueRef_; // simply copy assign
+	return *this;
 }
 
 template<typename T>
@@ -901,40 +922,30 @@ inline ofxJsonMemberIterator ofxJsonObjectRef::erase(const ofxJsonMemberIterator
 
 
 inline unordered_map<string, bool> ofxJsonObjectRef::getBoolMap() const {
-    return operator unordered_map<string, bool>();
+    return getMap<bool>();
 }
 inline unordered_map<string, int> ofxJsonObjectRef::getIntMap() const {
-    return operator unordered_map<string, int>();
+    return getMap<int>();
 }
 inline unordered_map<string, float> ofxJsonObjectRef::getFloatMap() const {
-    return operator unordered_map<string, float>();
+    return getMap<float>();
 }
 inline unordered_map<string, double> ofxJsonObjectRef::getDoubleMap() const {
-    return operator unordered_map<string, double>();
+    return getMap<double>();
 }
 inline unordered_map<string, string> ofxJsonObjectRef::getStringMap() const {
-    return operator unordered_map<string, string>();
+    return getMap<string>();
 }
 
 inline ofxJsonValueRef ofxJsonObjectRef::getValue() const {
     return valueRef_;
 }
 
-inline ofxJsonObjectRef::operator unordered_map<string, bool>() const {
-    return getMap<bool>();
+template<typename T>
+inline ofxJsonObjectRef::operator unordered_map<string, T>() const {
+    return getMap<T>();
 }
-inline ofxJsonObjectRef::operator unordered_map<string, int>() const {
-    return getMap<int>();
-}
-inline ofxJsonObjectRef::operator unordered_map<string, float>() const {
-    return getMap<float>();
-}
-inline ofxJsonObjectRef::operator unordered_map<string, double>() const {
-    return getMap<double>();
-}
-inline ofxJsonObjectRef::operator unordered_map<string, string>() const {
-    return getMap<string>();
-}
+
 
 /// helper function
 template<typename T>
