@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "lib/rapidjson/document.h"
 #include "lib/rapidjson/error/error.h"
@@ -15,6 +16,9 @@
 
 #include "ofFileUtils.h"
 #include "ofLog.h"
+#include "ofPoint.h"
+
+using namespace std;
 
 /*////////////////// ofxPrettyJsonWriter //////////////*/
 
